@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Whack-a-Epstein</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    color: #fff;
+    user-select: none;
+    overflow-x: hidden;
+  }
+  h1 {
+    margin-top: 15px;
+    font-size: 2.5rem;
+    color: #e94560;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  .subtitle {
+    color: #aaa;
+    margin-bottom: 5px;
+    font-style: italic;
+  }
+  .hud {
+    display: flex;
+    gap: 30px;
+    margin: 10px 0;
+    font-size: 1.3rem;
+  }
+  .hud span { color: #e94560; font-weight: bold; }
+  .zone-hint {
+    color: #666;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+  }
+  .lives {
+    font-size: 1.8rem;
+    letter-spacing: 5px;
+  }
+  .lives .lost { opacity: 0.2; }
+  .speed-label {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+  .game-area {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    padding: 15px;
+  }
+  .hole {
+    width: 160px;
+    height: 180px;
+    background: #16213e;
+    border-radius: 50%;
+    border: 4px solid #0f3460;
+    position: relative;
+    overflow: hidden;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="28" font-size="28">🔨</text></svg>') 16 16, pointer;
+    transition: border-color 0.2s;
+  }
+  .hole:hover { border-color: #e94560; }
+  .hole::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 35%;
+    background: linear-gradient(to top, #0f3460, transparent);
+    border-radius: 0 0 50% 50%;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .mole {
+    position: absolute;
+    bottom: -120%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 150px;
+    transition: bottom 0.2s ease-out;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .mole img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 10px;
+    pointer-events: none;
+  }
+  .mole.up { bottom: 5%; pointer-events: auto; }
+  .mole.bonked { bottom: 5%; pointer-events: none; }
+
+  .hammer {
+    position: absolute; z-index: 20;
+    width: 70px; height: 70px;
+    pointer-events: none;
+    animation: hammerSmash 0.35s ease-in forwards;
+  }
+  @keyframes hammerSmash {
+    0% { transform: translate(-50%, -80%) rotate(-45deg) scale(1.3); opacity: 1; }
+    30% { transform: translate(-50%, -30%) rotate(15deg) scale(1.5); opacity: 1; }
+    50% { transform: translate(-50%, -10%) rotate(0deg) scale(1.6); opacity: 1; }
+    60% { transform: translate(-50%, -10%) rotate(0deg) scale(1.6); opacity: 1; }
+    100% { transform: translate(-50%, -40%) rotate(-20deg) scale(1); opacity: 0; }
+  }
+
+  .blood-drop {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 18;
+    animation: bloodFly var(--dur) ease-out forwards;
+  }
+  @keyframes bloodFly {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+    40% { opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(var(--sc)); opacity: 0; }
+  }
+  .blood-splat {
+    position: absolute;
+    pointer-events: none;
+    z-index: 17;
+    animation: splatGrow 0.5s ease-out forwards;
+  }
+  @keyframes splatGrow {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+    50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+
+  .impact {
+    position: absolute; z-index: 15;
+    width: 100px; height: 100px;
+    pointer-events: none;
+    animation: impactFlash 0.3s ease-out forwards;
+  }
+  @keyframes impactFlash {
+    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  }
+
+  .score-pop {
+    position: absolute; left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.6rem; font-weight: bold;
+    animation: popUp 0.8s ease-out forwards;
+    pointer-events: none; z-index: 25;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+  .score-pop.head { color: #ffaa00; top: 5%; }
+  .score-pop.groin { color: #ff00ff; top: 60%; }
+  .score-pop.body { color: #e94560; top: 30%; }
+  @keyframes popUp {
+    0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    30% { transform: translateX(-50%) translateY(-10px) scale(1.4); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-50px) scale(0.8); }
+  }
+
+  .btn {
+    margin: 15px; padding: 12px 40px;
+    font-size: 1.2rem; background: #e94560; color: #fff;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn:hover { background: #c73652; transform: scale(1.05); }
+  .btn:active { transform: scale(0.95); }
+  .game-over {
+    display: none; flex-direction: column;
+    align-items: center; margin-top: 20px;
+  }
+  .game-over h2 { font-size: 2rem; color: #e94560; margin-bottom: 10px; }
+  .game-over .final { font-size: 1.5rem; margin-bottom: 5px; }
+  .miss-flash { animation: missFlash 0.4s; }
+  @keyframes missFlash {
+    0% { border-color: #0f3460; }
+    50% { border-color: #ff0000; box-shadow: 0 0 20px rgba(255,0,0,0.6); }
+    100% { border-color: #0f3460; }
+  }
+  .shake { animation: shake 0.3s ease-out; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(-50%); }
+    20% { transform: translateX(calc(-50% + 8px)) rotate(5deg); }
+    40% { transform: translateX(calc(-50% - 8px)) rotate(-5deg); }
+    60% { transform: translateX(calc(-50% + 4px)) rotate(2deg); }
+    80% { transform: translateX(calc(-50% - 4px)) rotate(-2deg); }
+  }
+
+  /* Alex Jones panel */
+  .alex-panel {
+    width: 220px; text-align: center; padding-top: 10px;
+  }
+  .alex-panel img {
+    width: 190px; height: 190px;
+    object-fit: cover; object-position: top;
+    border-radius: 15px; border: 3px solid #333;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .alex-panel img.hyped {
+    border-color: #e94560;
+    transform: scale(1.08);
+    animation: alexBounce 0.4s ease-out;
+  }
+  @keyframes alexBounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.15) rotate(-3deg); }
+    60% { transform: scale(1.08) rotate(2deg); }
+    100% { transform: scale(1.08) rotate(0deg); }
+  }
+  .alex-quote {
+    margin-top: 10px; font-size: 1rem; color: #e94560;
+    font-weight: bold; min-height: 60px; line-height: 1.3;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  }
+  .alex-label { color: #666; font-size: 0.75rem; margin-top: 5px; }
+  .volume-ctrl { margin-top: 8px; }
+  .volume-ctrl label { color: #666; font-size: 0.75rem; }
+  .volume-ctrl input { width: 120px; }
+
+  .screen-shake { animation: screenShake 0.2s ease-out; }
+  @keyframes screenShake {
+    0%, 100% { transform: translate(0,0); }
+    25% { transform: translate(-4px, 3px); }
+    50% { transform: translate(4px, -3px); }
+    75% { transform: translate(-2px, 2px); }
+  }
+
+  /* Life lost flash */
+  .life-lost-flash {
+    animation: lifeLost 0.5s ease-out;
+  }
+  @keyframes lifeLost {
+    0% { box-shadow: inset 0 0 0 0 rgba(255,0,0,0); }
+    30% { box-shadow: inset 0 0 100px 50px rgba(255,0,0,0.3); }
+    100% { box-shadow: inset 0 0 0 0 rgba(255,0,0,0); }
+  }
+</style>
+</head>
+<body>
+  <h1>Whack-a-Epstein</h1>
+  <p class="subtitle">"He didn't whack himself"</p>
+  <p class="zone-hint">HEADSHOT = 2x | BODY = 1x | BELOW THE BELT = 5x</p>
+  <div class="hud">
+    <div>Score: <span id="score">0</span></div>
+    <div>Combo: <span id="combo">0</span>x</div>
+    <div id="livesDisplay" class="lives">❤️❤️❤️</div>
+  </div>
+  <div class="speed-label" id="speedLabel">SPEED: EASY</div>
+
+  <div class="game-area">
+    <div class="board" id="board"></div>
+    <div class="alex-panel" id="alexPanel">
+      <img id="alexImg" src="https://images.foxtv.com/static.fox4news.com/www.fox4news.com/content/uploads/2019/08/1280/720/1b228377-alex20jones_1533587354775.jpg_5892739_ver1.0_640_360.jpg?ve=1&tl=1" alt="Alex Jones">
+      <div class="alex-quote" id="alexQuote">Hit START and take down the globalists!</div>
+      <div class="alex-label">Your Hype Man</div>
+      <div class="volume-ctrl">
+        <label>Alex Volume</label><br>
+        <input type="range" id="alexVol" min="0" max="100" value="70">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" id="startBtn">Start Game</button>
+  <div class="game-over" id="gameOver">
+    <h2>GAME OVER</h2>
+    <p class="final">Final Score: <span id="finalScore">0</span></p>
+    <p class="final">Headshots: <span id="finalHead">0</span> | Body: <span id="finalBody">0</span> | Groin: <span id="finalGroin">0</span></p>
+    <p class="final">Best Combo: <span id="finalCombo">0</span>x | Round: <span id="finalRound">0</span></p>
+    <p id="verdict" style="color:#aaa; margin-top:5px;"></p>
+    <button class="btn" id="restartBtn">Play Again</button>
+  </div>
+
+<script>
+const HOLES = 9;
+const MAX_LIVES = 3;
+
+const IMAGES = [
+  'https://i.abcnewsfe.com/a/a730ee0c-6d4d-4c6c-ae79-c225ce30bd58/epstein-5-ht-gmh-251219_1766184620739_hpEmbed_2_25x16.jpg?w=1500',
+  'https://npr.brightspotcdn.com/dims3/default/strip/false/crop/3600x2400+0+0/resize/1100/quality/50/format/jpeg/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2F1d%2Fa4%2F3b45080d4eebbe1e5183d165aa81%2Fgettyimages-590696434.jpg',
+  'https://www.aljazeera.com/wp-content/uploads/2025/07/GettyImages-1192977790-1752836036.jpg?resize=770%2C513&quality=80',
+  'https://pbs.twimg.com/media/HAUsL-SW8AAzJUn.jpg',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlP5BVESiUFWzbTyJA_MWVTZjPuT1u9NlILA&s',
+  'https://www.washingtonpost.com/wp-apps/imrs.php?src=https://arc-anglerfish-washpost-prod-washpost.s3.amazonaws.com/public/ATK2LIVIWMI6TBZTJDEHENPTSY.jpg&w=1440&impolicy=high_res',
+  'https://static01.nyt.com/images/2021/12/01/nyregion/01maxwell-trial-epstein-suicide01/01maxwell-trial-epstein-suicide01-mediumSquareAt3X.jpg',
+  'https://live-production.wcms.abc-cdn.net.au/26f50e2a701b359b949b3b73721cfcac?impolicy=wcms_crop_resize&cropH=765&cropW=765&xPos=131&yPos=0&width=862&height=862',
+  'https://d3i6fh83elv35t.cloudfront.net/static/2025/12/billclinton3-1024x793.jpg'
+];
+
+// ---- Alex Jones Voice Clips (from myinstants.com) ----
+const MI = 'https://www.myinstants.com/media/sounds/';
+const ALEX_CLIPS = {
+  hit: [
+    MI + 'alex-jones-yell.mp3',
+    MI + 'illbeatyoass_2jcnXDq.mp3',
+    MI + 'alex-jones-ill-beat-your-ass.mp3',
+    MI + 'alex-jones-you-sob.mp3',
+  ],
+  bigHit: [
+    MI + 'uuuuuaaaaaarrrrrrruuuuaaaaaaggghhhh_jtvTsZ9.mp3',
+    MI + 'alex-jones-scream-1.mp3',
+    MI + 'destroy-the-child.mp3',
+  ],
+  combo: [
+    MI + 'alex-jones-against-piers-morgan-on-2nd-ammendment-1776-will-commence-again-clip.mp3',
+    MI + 'alex-jones-goblins.mp3',
+  ],
+  miss: [
+    MI + 'alex-jones-scan.mp3',
+  ],
+  start: [
+    MI + 'c290b740-0cc7-11e9-9d86-05fde4d5e89f.mp3',
+  ],
+};
+
+// Alex Jones text quotes (shown alongside voice)
+const ALEX_QUOTES = {
+  head: [
+    "RIGHT IN THE GLOBALIST HEAD!",
+    "THAT'S WHAT I'M TALKING ABOUT!",
+    "HEADSHOT! THE TRUTH PREVAILS!",
+    "BOOM! CRITICAL HIT ON THE ELITE!",
+  ],
+  groin: [
+    "BELOW THE BELT!! THAT'S FOR THE CHILDREN!!!",
+    "HE WON'T BE TRAFFICKING ANYMORE!",
+    "JUSTICE IS SERVED... DOWN THERE!",
+    "THE GLOBALISTS CAN'T REPRODUCE NOW!",
+  ],
+  body: [
+    "YEAH! GET HIM!",
+    "KEEP HITTING! DON'T STOP!",
+    "THE PEOPLE ARE FIGHTING BACK!",
+    "HIT HIM AGAIN!",
+  ],
+  combo: [
+    "UNSTOPPABLE PATRIOT!!",
+    "THEY CAN'T STOP US!",
+    "THE AWAKENING IS HERE!",
+    "WE HAVE THE DOCUMENTS!",
+  ],
+  miss: [
+    "HE GOT AWAY! GET HIM NEXT TIME!",
+    "THEY'RE TRYING TO ESCAPE!",
+    "DON'T LET THE ELITES WIN!",
+    "FOCUS! THE TRUTH NEEDS YOU!",
+  ],
+  start: ["IT'S GO TIME! TAKE 'EM DOWN!"],
+  end: ["THE FIGHT CONTINUES TOMORROW, PATRIOT."],
+};
+
+// ---- Audio ----
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let currentAlexAudio = null;
+
+function getAlexVolume() {
+  return document.getElementById('alexVol').value / 100;
+}
+
+function playAlexClip(category) {
+  const clips = ALEX_CLIPS[category];
+  if (!clips || clips.length === 0) return;
+  const url = clips[Math.floor(Math.random() * clips.length)];
+  if (currentAlexAudio) {
+    currentAlexAudio.pause();
+    currentAlexAudio.currentTime = 0;
+  }
+  const audio = new Audio(url);
+  audio.volume = getAlexVolume();
+  audio.play().catch(() => {});
+  currentAlexAudio = audio;
+}
+
+function playWhack(zone) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.2);
+
+  const bufferSize = audioCtx.sampleRate * 0.1;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const ng = audioCtx.createGain();
+  noise.connect(ng); ng.connect(audioCtx.destination);
+  ng.gain.setValueAtTime(0.4, audioCtx.currentTime);
+  ng.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  noise.start(audioCtx.currentTime);
+
+  if (zone === 'head') {
+    const c = audioCtx.createOscillator();
+    const cg = audioCtx.createGain();
+    c.connect(cg); cg.connect(audioCtx.destination);
+    c.frequency.setValueAtTime(800, audioCtx.currentTime);
+    c.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.08);
+    cg.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    cg.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    c.start(audioCtx.currentTime); c.stop(audioCtx.currentTime + 0.1);
+  }
+  if (zone === 'groin') {
+    const s = audioCtx.createOscillator();
+    const sg = audioCtx.createGain();
+    s.type = 'sawtooth'; s.connect(sg); sg.connect(audioCtx.destination);
+    s.frequency.setValueAtTime(300, audioCtx.currentTime + 0.05);
+    s.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+    sg.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.05);
+    sg.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    s.start(audioCtx.currentTime + 0.05); s.stop(audioCtx.currentTime + 0.3);
+
+    const y = audioCtx.createOscillator();
+    const yg = audioCtx.createGain();
+    y.connect(yg); yg.connect(audioCtx.destination);
+    y.frequency.setValueAtTime(600, audioCtx.currentTime + 0.08);
+    y.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
+    y.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.3);
+    yg.gain.setValueAtTime(0.25, audioCtx.currentTime + 0.08);
+    yg.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+    y.start(audioCtx.currentTime + 0.08); y.stop(audioCtx.currentTime + 0.35);
+  }
+}
+
+function playMissSound() {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.frequency.setValueAtTime(400, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.4);
+  g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+  o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.4);
+}
+
+// ---- Game State ----
+let score = 0;
+let combo = 0;
+let bestCombo = 0;
+let headshots = 0;
+let bodyshots = 0;
+let groinshots = 0;
+let lives = MAX_LIVES;
+let round = 0;
+let moleTimeout = null;
+let running = false;
+let lastHole = -1;
+let totalWhacks = 0;
+
+const board = document.getElementById('board');
+const scoreEl = document.getElementById('score');
+const comboEl = document.getElementById('combo');
+const livesDisplay = document.getElementById('livesDisplay');
+const speedLabel = document.getElementById('speedLabel');
+const startBtn = document.getElementById('startBtn');
+const gameOver = document.getElementById('gameOver');
+const finalScore = document.getElementById('finalScore');
+const finalHead = document.getElementById('finalHead');
+const finalBody = document.getElementById('finalBody');
+const finalGroin = document.getElementById('finalGroin');
+const finalCombo = document.getElementById('finalCombo');
+const finalRound = document.getElementById('finalRound');
+const verdict = document.getElementById('verdict');
+const restartBtn = document.getElementById('restartBtn');
+const alexImg = document.getElementById('alexImg');
+const alexQuote = document.getElementById('alexQuote');
+
+const hammerSVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect x="28" y="30" width="8" height="30" rx="3" fill="#8B4513"/>
+  <rect x="10" y="8" width="44" height="24" rx="5" fill="#888"/>
+  <rect x="12" y="10" width="40" height="20" rx="4" fill="#aaa" opacity="0.4"/>
+</svg>`;
+
+const impactSVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="50,5 61,35 95,35 67,55 78,90 50,68 22,90 33,55 5,35 39,35" fill="#ffcc00" opacity="0.8"/>
+</svg>`;
+
+// Preload images
+IMAGES.forEach(src => { const img = new Image(); img.src = src; });
+
+// ---- Speed calculation ----
+function getShowTime() {
+  // Starts at 2500ms, decreases with each whack
+  return Math.max(400, 2500 - totalWhacks * 40);
+}
+function getSpawnDelay() {
+  return Math.max(100, 500 - totalWhacks * 10);
+}
+function getSpeedTier() {
+  if (totalWhacks < 8) return 'EASY';
+  if (totalWhacks < 18) return 'MEDIUM';
+  if (totalWhacks < 30) return 'FAST';
+  if (totalWhacks < 45) return 'INSANE';
+  return 'IMPOSSIBLE';
+}
+
+// ---- Lives display ----
+function updateLives() {
+  let html = '';
+  for (let i = 0; i < MAX_LIVES; i++) {
+    html += i < lives ? '❤️' : '<span class="lost">🖤</span>';
+  }
+  livesDisplay.innerHTML = html;
+}
+
+// ---- Alex Jones Hype ----
+function alexSay(textCategory, audioCategory) {
+  const quotes = ALEX_QUOTES[textCategory];
+  alexQuote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+  alexImg.classList.remove('hyped');
+  void alexImg.offsetWidth;
+  alexImg.classList.add('hyped');
+  setTimeout(() => alexImg.classList.remove('hyped'), 500);
+  if (audioCategory) playAlexClip(audioCategory);
+}
+
+// ---- Blood Effects ----
+function spawnBlood(hole, x, y, intensity) {
+  const count = intensity === 'groin' ? 22 : intensity === 'head' ? 16 : 10;
+  for (let i = 0; i < count; i++) {
+    const drop = document.createElement('div');
+    drop.classList.add('blood-drop');
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 30 + Math.random() * 70;
+    const tx = Math.cos(angle) * dist;
+    const ty = Math.sin(angle) * dist - 20;
+    const sc = 0.5 + Math.random() * 2.5;
+    const dur = 0.3 + Math.random() * 0.5;
+    const size = 6 + Math.random() * 12;
+    drop.style.cssText = `left:${x}px;top:${y}px;--tx:${tx}px;--ty:${ty}px;--sc:${sc};--dur:${dur}s;
+      width:${size}px;height:${size}px;
+      background:hsl(${Math.random()*10}, 100%, ${12 + Math.random()*20}%);`;
+    hole.appendChild(drop);
+    setTimeout(() => drop.remove(), dur * 1000);
+  }
+  const splat = document.createElement('div');
+  splat.classList.add('blood-splat');
+  const size = intensity === 'groin' ? 100 : intensity === 'head' ? 80 : 55;
+  splat.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;`;
+  splat.innerHTML = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="42" fill="#8b0000" opacity="0.8"/>
+    <circle cx="30" cy="35" r="18" fill="#6b0000" opacity="0.6"/>
+    <circle cx="65" cy="60" r="22" fill="#5b0000" opacity="0.5"/>
+    <circle cx="50" cy="25" r="12" fill="#9b0000" opacity="0.5"/>
+    <circle cx="70" cy="30" r="8" fill="#7b0000" opacity="0.4"/>
+  </svg>`;
+  hole.appendChild(splat);
+  setTimeout(() => splat.remove(), 500);
+}
+
+// ---- Build Board ----
+for (let i = 0; i < HOLES; i++) {
+  const hole = document.createElement('div');
+  hole.classList.add('hole');
+  hole.dataset.index = i;
+  const mole = document.createElement('div');
+  mole.classList.add('mole');
+  const img = document.createElement('img');
+  img.src = IMAGES[0]; img.draggable = false;
+  mole.appendChild(img);
+  hole.appendChild(mole);
+  hole.addEventListener('click', (e) => whack(i, e));
+  board.appendChild(hole);
+}
+
+const holes = document.querySelectorAll('.hole');
+const moles = document.querySelectorAll('.mole');
+
+function randomHole() {
+  let idx;
+  do { idx = Math.floor(Math.random() * HOLES); } while (idx === lastHole);
+  lastHole = idx;
+  return idx;
+}
+
+function getHitZone(e, moleEl) {
+  const rect = moleEl.getBoundingClientRect();
+  const relY = (e.clientY - rect.top) / rect.height;
+  if (relY < 0.30) return 'head';
+  if (relY > 0.75) return 'groin';
+  return 'body';
+}
+
+function getMultiplier(zone) {
+  if (zone === 'head') return 2;
+  if (zone === 'groin') return 5;
+  return 1;
+}
+
+function getZoneLabel(zone, pts) {
+  if (zone === 'head') return `HEADSHOT! +${pts}`;
+  if (zone === 'groin') return `GROIN SHOT! +${pts}`;
+  return `+${pts}`;
+}
+
+function spawnHammer(hole, e) {
+  const rect = hole.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const hammer = document.createElement('div');
+  hammer.classList.add('hammer');
+  hammer.innerHTML = hammerSVG;
+  hammer.style.left = x + 'px'; hammer.style.top = y + 'px';
+  hole.appendChild(hammer);
+  setTimeout(() => hammer.remove(), 350);
+
+  const impact = document.createElement('div');
+  impact.classList.add('impact');
+  impact.innerHTML = impactSVG;
+  impact.style.left = x + 'px'; impact.style.top = y + 'px';
+  hole.appendChild(impact);
+  setTimeout(() => impact.remove(), 300);
+}
+
+function showMole() {
+  if (!running) return;
+  const idx = randomHole();
+  const mole = moles[idx];
+  const img = mole.querySelector('img');
+  img.src = IMAGES[Math.floor(Math.random() * IMAGES.length)];
+  mole.classList.remove('bonked', 'shake');
+  mole.style.filter = '';
+  mole.classList.add('up');
+  mole.dataset.hit = 'false';
+  round++;
+
+  const showTime = getShowTime();
+  speedLabel.textContent = 'SPEED: ' + getSpeedTier();
+
+  moleTimeout = setTimeout(() => {
+    if (mole.dataset.hit === 'false' && mole.classList.contains('up')) {
+      mole.classList.remove('up');
+      lives--;
+      updateLives();
+      combo = 0;
+      comboEl.textContent = combo;
+      holes[idx].classList.add('miss-flash');
+      setTimeout(() => holes[idx].classList.remove('miss-flash'), 400);
+      document.body.classList.add('life-lost-flash');
+      setTimeout(() => document.body.classList.remove('life-lost-flash'), 500);
+      playMissSound();
+      alexSay('miss', 'miss');
+
+      if (lives <= 0) {
+        endGame();
+        return;
+      }
+    }
+    if (running) setTimeout(showMole, getSpawnDelay());
+  }, showTime);
+}
+
+function whack(idx, e) {
+  if (!running) return;
+  const mole = moles[idx];
+  if (!mole.classList.contains('up') || mole.dataset.hit === 'true') return;
+
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const zone = getHitZone(e, mole);
+  const mult = getMultiplier(zone);
+  const pts = 10 * mult;
+
+  mole.dataset.hit = 'true';
+  totalWhacks++;
+
+  const rect = holes[idx].getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+
+  spawnHammer(holes[idx], e);
+  spawnBlood(holes[idx], cx, cy, zone);
+  playWhack(zone);
+
+  // Screen shake on big hits
+  if (zone === 'groin' || zone === 'head') {
+    document.body.classList.remove('screen-shake');
+    void document.body.offsetWidth;
+    document.body.classList.add('screen-shake');
+    setTimeout(() => document.body.classList.remove('screen-shake'), 200);
+  }
+
+  mole.classList.add('shake');
+  mole.style.filter = 'brightness(0.3) saturate(0) sepia(1) hue-rotate(-30deg)';
+  setTimeout(() => {
+    mole.classList.remove('up', 'shake');
+    mole.style.filter = '';
+  }, 400);
+
+  combo++;
+  if (combo > bestCombo) bestCombo = combo;
+  comboEl.textContent = combo;
+
+  score += pts;
+  if (zone === 'head') headshots++;
+  else if (zone === 'groin') groinshots++;
+  else bodyshots++;
+  scoreEl.textContent = score;
+
+  // Alex Jones reacts - voice + text
+  if (combo >= 4) {
+    alexSay('combo', 'combo');
+  } else if (zone === 'groin' || zone === 'head') {
+    alexSay(zone, 'bigHit');
+  } else {
+    alexSay('body', 'hit');
+  }
+
+  // Score popup
+  const pop = document.createElement('div');
+  pop.classList.add('score-pop', zone);
+  pop.textContent = getZoneLabel(zone, pts);
+  if (combo > 2) pop.textContent += ` (${combo}x combo!)`;
+  holes[idx].appendChild(pop);
+  setTimeout(() => pop.remove(), 800);
+}
+
+function startGame() {
+  score = 0; combo = 0; bestCombo = 0; round = 0; totalWhacks = 0;
+  headshots = 0; bodyshots = 0; groinshots = 0;
+  lives = MAX_LIVES; lastHole = -1;
+  scoreEl.textContent = 0;
+  comboEl.textContent = 0;
+  updateLives();
+  speedLabel.textContent = 'SPEED: EASY';
+  gameOver.style.display = 'none';
+  startBtn.style.display = 'none';
+  running = true;
+
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  alexSay('start', 'start');
+
+  setTimeout(showMole, 1000);
+}
+
+function endGame() {
+  running = false;
+  clearTimeout(moleTimeout);
+  moles.forEach(m => {
+    m.classList.remove('up', 'bonked', 'shake');
+    m.style.filter = '';
+  });
+
+  finalScore.textContent = score;
+  finalHead.textContent = headshots;
+  finalBody.textContent = bodyshots;
+  finalGroin.textContent = groinshots;
+  finalCombo.textContent = bestCombo;
+  finalRound.textContent = round;
+
+  alexSay('end', null);
+
+  if (score >= 500) verdict.textContent = '"The whole island is clean. Justice served."';
+  else if (score >= 300) verdict.textContent = '"Solid work. The elites are shaking."';
+  else if (score >= 150) verdict.textContent = '"Not bad. Keep fighting the good fight."';
+  else verdict.textContent = '"The cover-up continues... try harder."';
+
+  gameOver.style.display = 'flex';
+}
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+</script>
+</body>
+</html>

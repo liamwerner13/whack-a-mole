@@ -4,85 +4,301 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Whack-a-Epstein</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg-deep: #0a0a1a;
+    --bg-mid: #111128;
+    --bg-panel: rgba(20, 20, 50, 0.7);
+    --accent: #e94560;
+    --accent-glow: rgba(233, 69, 96, 0.4);
+    --accent-bright: #ff3d5a;
+    --gold: #ffd700;
+    --gold-glow: rgba(255, 215, 0, 0.3);
+    --text: #eee;
+    --text-dim: #888;
+    --hole-bg: #0c0c22;
+    --hole-border: #1a1a4a;
+    --hole-hover: #e94560;
+    --radius: 16px;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
-    background: #1a1a2e;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-deep);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    color: #fff;
+    color: var(--text);
     user-select: none;
     overflow-x: hidden;
+    position: relative;
   }
-  h1 {
-    margin-top: 15px;
-    font-size: 2.5rem;
-    color: #e94560;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+
+  /* ---- Animated background ---- */
+  .bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .game-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding-bottom: 40px;
+  }
+
+  /* ---- Intro / Splash Screen ---- */
+  .intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--bg-deep);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+  }
+  .intro-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .intro-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: 4rem;
+    color: var(--accent);
+    text-shadow: 0 0 40px var(--accent-glow), 0 0 80px var(--accent-glow);
+    letter-spacing: 3px;
+    animation: introGlow 2s ease-in-out infinite alternate;
+    text-align: center;
+    line-height: 1.1;
+  }
+  @keyframes introGlow {
+    from { text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow); }
+    to   { text-shadow: 0 0 40px var(--accent-glow), 0 0 100px var(--accent-glow), 0 0 150px rgba(233,69,96,0.15); }
+  }
+  .intro-sub {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 1.2rem;
+    margin-top: 10px;
+    opacity: 0.7;
+  }
+  .intro-music-box {
+    margin-top: 50px;
+    background: var(--bg-panel);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    border-radius: var(--radius);
+    padding: 30px 40px;
+    text-align: center;
+    max-width: 420px;
+    animation: fadeSlideUp 0.8s ease-out 0.3s both;
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .intro-music-box h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .intro-music-box p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+  .intro-btns {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .intro-btn {
+    padding: 14px 32px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .intro-btn.primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .intro-btn.primary:hover {
+    background: var(--accent-bright);
+    box-shadow: 0 0 35px var(--accent-glow), 0 0 60px var(--accent-glow);
+    transform: scale(1.05);
+  }
+  .intro-btn.secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border-color: rgba(255,255,255,0.15);
+  }
+  .intro-btn.secondary:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: scale(1.05);
+  }
+
+  /* ---- Header ---- */
+  .header {
+    text-align: center;
+    padding: 20px 20px 0;
+  }
+  .header h1 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 2.8rem;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-glow);
+    letter-spacing: 2px;
   }
   .subtitle {
-    color: #aaa;
-    margin-bottom: 5px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dim);
     font-style: italic;
+    font-size: 0.95rem;
+    margin-top: 2px;
+    opacity: 0.6;
   }
-  .hud {
+
+  /* ---- HUD ---- */
+  .hud-bar {
     display: flex;
-    gap: 30px;
-    margin: 10px 0;
-    font-size: 1.3rem;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 14px 10px 6px;
+    width: 100%;
+    max-width: 900px;
   }
-  .hud span { color: #e94560; font-weight: bold; }
+  .hud-card {
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 10px 20px;
+    text-align: center;
+    min-width: 100px;
+    transition: border-color 0.3s;
+  }
+  .hud-card:hover { border-color: rgba(233, 69, 96, 0.3); }
+  .hud-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .hud-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent-glow);
+  }
+  .hud-value.gold {
+    color: var(--gold);
+    text-shadow: 0 0 10px var(--gold-glow);
+  }
+  .hud-lives {
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+  }
+  .hud-lives .lost { opacity: 0.15; filter: grayscale(1); }
+
   .zone-hint {
-    color: #666;
-    font-size: 0.8rem;
-    margin-bottom: 5px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    opacity: 0.5;
   }
-  .lives {
-    font-size: 1.8rem;
-    letter-spacing: 5px;
-  }
-  .lives .lost { opacity: 0.2; }
+
   .speed-label {
-    color: #ff6b6b;
-    font-size: 0.9rem;
-    font-weight: bold;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-shadow: 0 0 8px var(--accent-glow);
+    margin-bottom: 4px;
   }
+
+  /* ---- Game Area ---- */
   .game-area {
     display: flex;
     align-items: flex-start;
-    gap: 20px;
+    gap: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
+
   .board {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    padding: 15px;
+    gap: 14px;
+    padding: 14px;
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 20px;
   }
+
   .hole {
     width: 160px;
     height: 180px;
-    background: #16213e;
+    background: radial-gradient(ellipse at center, var(--hole-bg) 60%, #06061a 100%);
     border-radius: 50%;
-    border: 4px solid #0f3460;
+    border: 3px solid var(--hole-border);
     position: relative;
     overflow: hidden;
     cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="28" font-size="28">🔨</text></svg>') 16 16, pointer;
-    transition: border-color 0.2s;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    box-shadow: inset 0 8px 20px rgba(0,0,0,0.6), 0 0 0 0 transparent;
   }
-  .hole:hover { border-color: #e94560; }
+  .hole:hover {
+    border-color: var(--hole-hover);
+    box-shadow: inset 0 8px 20px rgba(0,0,0,0.6), 0 0 25px var(--accent-glow);
+  }
   .hole::after {
     content: '';
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    height: 35%;
-    background: linear-gradient(to top, #0f3460, transparent);
+    height: 38%;
+    background: linear-gradient(to top, #06061a 5%, transparent);
     border-radius: 0 0 50% 50%;
     pointer-events: none;
     z-index: 3;
   }
+
   .mole {
     position: absolute;
     bottom: -120%;
@@ -101,10 +317,12 @@
     object-position: top;
     border-radius: 10px;
     pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
   .mole.up { bottom: 5%; pointer-events: auto; }
   .mole.bonked { bottom: 5%; pointer-events: none; }
 
+  /* ---- Hammer & Impact ---- */
   .hammer {
     position: absolute; z-index: 20;
     width: 70px; height: 70px;
@@ -112,11 +330,11 @@
     animation: hammerSmash 0.35s ease-in forwards;
   }
   @keyframes hammerSmash {
-    0% { transform: translate(-50%, -80%) rotate(-45deg) scale(1.3); opacity: 1; }
-    30% { transform: translate(-50%, -30%) rotate(15deg) scale(1.5); opacity: 1; }
-    50% { transform: translate(-50%, -10%) rotate(0deg) scale(1.6); opacity: 1; }
-    60% { transform: translate(-50%, -10%) rotate(0deg) scale(1.6); opacity: 1; }
-    100% { transform: translate(-50%, -40%) rotate(-20deg) scale(1); opacity: 0; }
+    0%  { transform: translate(-50%, -80%) rotate(-45deg) scale(1.3); opacity: 1; }
+    30% { transform: translate(-50%, -30%) rotate(15deg)  scale(1.5); opacity: 1; }
+    50% { transform: translate(-50%, -10%) rotate(0deg)   scale(1.6); opacity: 1; }
+    60% { transform: translate(-50%, -10%) rotate(0deg)   scale(1.6); opacity: 1; }
+    100%{ transform: translate(-50%, -40%) rotate(-20deg)  scale(1);   opacity: 0; }
   }
 
   .blood-drop {
@@ -127,8 +345,8 @@
     animation: bloodFly var(--dur) ease-out forwards;
   }
   @keyframes bloodFly {
-    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-    40% { opacity: 1; }
+    0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+    40%  { opacity: 1; }
     100% { transform: translate(var(--tx), var(--ty)) scale(var(--sc)); opacity: 0; }
   }
   .blood-splat {
@@ -138,9 +356,9 @@
     animation: splatGrow 0.5s ease-out forwards;
   }
   @keyframes splatGrow {
-    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+    0%  { transform: translate(-50%, -50%) scale(0);   opacity: 0.9; }
     50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
-    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    100%{ transform: translate(-50%, -50%) scale(1);   opacity: 0; }
   }
 
   .impact {
@@ -150,118 +368,301 @@
     animation: impactFlash 0.3s ease-out forwards;
   }
   @keyframes impactFlash {
-    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+    0%  { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
     50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
-    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    100%{ transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
   }
 
+  /* ---- Score Pop ---- */
   .score-pop {
     position: absolute; left: 50%;
     transform: translateX(-50%);
-    font-size: 1.6rem; font-weight: bold;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem; font-weight: 700;
     animation: popUp 0.8s ease-out forwards;
     pointer-events: none; z-index: 25;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.9);
     white-space: nowrap;
+    letter-spacing: 1px;
   }
-  .score-pop.head { color: #ffaa00; top: 5%; }
+  .score-pop.head  { color: var(--gold); top: 5%; }
   .score-pop.groin { color: #ff00ff; top: 60%; }
-  .score-pop.body { color: #e94560; top: 30%; }
+  .score-pop.body  { color: var(--accent); top: 30%; }
   @keyframes popUp {
-    0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    0%  { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);   }
     30% { transform: translateX(-50%) translateY(-10px) scale(1.4); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-50px) scale(0.8); }
+    100%{ opacity: 0; transform: translateX(-50%) translateY(-50px) scale(0.8); }
   }
 
+  /* ---- Buttons ---- */
   .btn {
-    margin: 15px; padding: 12px 40px;
-    font-size: 1.2rem; background: #e94560; color: #fff;
-    border: none; border-radius: 8px; cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
+    margin: 18px;
+    padding: 14px 50px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 0 20px var(--accent-glow), 0 4px 15px rgba(0,0,0,0.4);
   }
-  .btn:hover { background: #c73652; transform: scale(1.05); }
+  .btn:hover {
+    background: var(--accent-bright);
+    box-shadow: 0 0 40px var(--accent-glow), 0 0 60px var(--accent-glow);
+    transform: scale(1.06);
+  }
   .btn:active { transform: scale(0.95); }
+
+  /* ---- Game Over ---- */
   .game-over {
-    display: none; flex-direction: column;
-    align-items: center; margin-top: 20px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    background: var(--bg-panel);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    border-radius: 20px;
+    padding: 30px 40px;
+    animation: fadeSlideUp 0.5s ease-out;
   }
-  .game-over h2 { font-size: 2rem; color: #e94560; margin-bottom: 10px; }
-  .game-over .final { font-size: 1.5rem; margin-bottom: 5px; }
+  .game-over h2 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 2.2rem;
+    color: var(--accent);
+    margin-bottom: 15px;
+    text-shadow: 0 0 30px var(--accent-glow);
+    letter-spacing: 3px;
+  }
+  .game-over .final {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    color: var(--text-dim);
+  }
+  .game-over .final span {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .game-over #verdict {
+    font-style: italic;
+    color: var(--text-dim);
+    margin-top: 10px;
+    font-size: 0.95rem;
+  }
+
+  /* ---- Miss flash ---- */
   .miss-flash { animation: missFlash 0.4s; }
   @keyframes missFlash {
-    0% { border-color: #0f3460; }
-    50% { border-color: #ff0000; box-shadow: 0 0 20px rgba(255,0,0,0.6); }
-    100% { border-color: #0f3460; }
+    0%  { border-color: var(--hole-border); }
+    50% { border-color: #ff0000; box-shadow: inset 0 8px 20px rgba(0,0,0,0.6), 0 0 30px rgba(255,0,0,0.6); }
+    100%{ border-color: var(--hole-border); }
   }
   .shake { animation: shake 0.3s ease-out; }
   @keyframes shake {
     0%, 100% { transform: translateX(-50%); }
-    20% { transform: translateX(calc(-50% + 8px)) rotate(5deg); }
-    40% { transform: translateX(calc(-50% - 8px)) rotate(-5deg); }
-    60% { transform: translateX(calc(-50% + 4px)) rotate(2deg); }
-    80% { transform: translateX(calc(-50% - 4px)) rotate(-2deg); }
+    20%  { transform: translateX(calc(-50% + 8px))  rotate(5deg); }
+    40%  { transform: translateX(calc(-50% - 8px))  rotate(-5deg); }
+    60%  { transform: translateX(calc(-50% + 4px))  rotate(2deg); }
+    80%  { transform: translateX(calc(-50% - 4px))  rotate(-2deg); }
   }
 
-  /* Alex Jones panel */
+  /* ---- Alex Jones Panel ---- */
   .alex-panel {
-    width: 220px; text-align: center; padding-top: 10px;
+    width: 230px;
+    text-align: center;
+    padding: 15px;
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 20px;
   }
   .alex-panel img {
-    width: 190px; height: 190px;
+    width: 195px; height: 195px;
     object-fit: cover; object-position: top;
-    border-radius: 15px; border: 3px solid #333;
-    transition: transform 0.2s, border-color 0.2s;
+    border-radius: 14px;
+    border: 3px solid rgba(255,255,255,0.08);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   .alex-panel img.hyped {
-    border-color: #e94560;
+    border-color: var(--accent);
     transform: scale(1.08);
+    box-shadow: 0 0 30px var(--accent-glow);
     animation: alexBounce 0.4s ease-out;
   }
   @keyframes alexBounce {
-    0% { transform: scale(1); }
+    0%  { transform: scale(1); }
     30% { transform: scale(1.15) rotate(-3deg); }
     60% { transform: scale(1.08) rotate(2deg); }
-    100% { transform: scale(1.08) rotate(0deg); }
+    100%{ transform: scale(1.08) rotate(0deg); }
   }
   .alex-quote {
-    margin-top: 10px; font-size: 1rem; color: #e94560;
-    font-weight: bold; min-height: 60px; line-height: 1.3;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    margin-top: 12px;
+    font-family: 'Russo One', sans-serif;
+    font-size: 0.85rem;
+    color: var(--accent);
+    min-height: 55px;
+    line-height: 1.35;
+    text-shadow: 0 0 10px var(--accent-glow);
   }
-  .alex-label { color: #666; font-size: 0.75rem; margin-top: 5px; }
-  .volume-ctrl { margin-top: 8px; }
-  .volume-ctrl label { color: #666; font-size: 0.75rem; }
-  .volume-ctrl input { width: 120px; }
+  .alex-label {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    margin-top: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+  .volume-ctrl { margin-top: 10px; }
+  .volume-ctrl label {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--text-dim);
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .volume-ctrl input[type="range"] {
+    width: 130px;
+    margin-top: 4px;
+    accent-color: var(--accent);
+  }
 
+  /* ---- Music controls (in-game) ---- */
+  .music-ctrl {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .music-ctrl.active { display: flex; }
+  .music-ctrl label {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--text-dim);
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .music-ctrl input[type="range"] {
+    width: 80px;
+    accent-color: var(--gold);
+  }
+  .music-toggle {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 1rem;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .music-toggle:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* ---- Screen effects ---- */
   .screen-shake { animation: screenShake 0.2s ease-out; }
   @keyframes screenShake {
     0%, 100% { transform: translate(0,0); }
-    25% { transform: translate(-4px, 3px); }
-    50% { transform: translate(4px, -3px); }
-    75% { transform: translate(-2px, 2px); }
+    25%  { transform: translate(-4px, 3px); }
+    50%  { transform: translate(4px, -3px); }
+    75%  { transform: translate(-2px, 2px); }
   }
 
-  /* Life lost flash */
-  .life-lost-flash {
-    animation: lifeLost 0.5s ease-out;
-  }
+  .life-lost-flash { animation: lifeLost 0.5s ease-out; }
   @keyframes lifeLost {
-    0% { box-shadow: inset 0 0 0 0 rgba(255,0,0,0); }
+    0%  { box-shadow: inset 0 0 0 0 rgba(255,0,0,0); }
     30% { box-shadow: inset 0 0 100px 50px rgba(255,0,0,0.3); }
-    100% { box-shadow: inset 0 0 0 0 rgba(255,0,0,0); }
+    100%{ box-shadow: inset 0 0 0 0 rgba(255,0,0,0); }
+  }
+
+  /* ---- Scanline overlay ---- */
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 30px;
+    padding: 15px;
+    text-align: center;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.15);
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 2px;
   }
 </style>
 </head>
 <body>
-  <h1>Whack-a-Epstein</h1>
-  <p class="subtitle">"He didn't whack himself"</p>
-  <p class="zone-hint">HEADSHOT = 2x | BODY = 1x | BELOW THE BELT = 5x</p>
-  <div class="hud">
-    <div>Score: <span id="score">0</span></div>
-    <div>Combo: <span id="combo">0</span>x</div>
-    <div id="livesDisplay" class="lives">❤️❤️❤️</div>
+
+<!-- Subtle CRT scanlines overlay -->
+<div class="scanlines"></div>
+
+<!-- Animated particle background -->
+<canvas class="bg-canvas" id="bgCanvas"></canvas>
+
+<!-- ---- INTRO SCREEN ---- -->
+<div class="intro-overlay" id="introOverlay">
+  <div class="intro-title">WHACK-A-EPSTEIN</div>
+  <p class="intro-sub">"He didn't whack himself"</p>
+  <div class="intro-music-box">
+    <h3>Background Music</h3>
+    <p>Play background music during the game?</p>
+    <div class="intro-btns">
+      <button class="intro-btn primary" id="introMusicYes">Play with Music</button>
+      <button class="intro-btn secondary" id="introMusicNo">No Music</button>
+    </div>
   </div>
-  <div class="speed-label" id="speedLabel">SPEED: EASY</div>
+</div>
+
+<!-- ---- GAME UI ---- -->
+<div class="game-wrapper" id="gameWrapper">
+  <div class="header">
+    <h1>Whack-a-Epstein</h1>
+    <p class="subtitle">"He didn't whack himself"</p>
+  </div>
+
+  <p class="zone-hint">HEADSHOT = 2x &nbsp; | &nbsp; BODY = 1x &nbsp; | &nbsp; BELOW THE BELT = 5x</p>
+
+  <div class="hud-bar">
+    <div class="hud-card">
+      <div class="hud-label">Score</div>
+      <div class="hud-value" id="score">0</div>
+    </div>
+    <div class="hud-card">
+      <div class="hud-label">Combo</div>
+      <div class="hud-value gold" id="combo">0</div>
+    </div>
+    <div class="hud-card">
+      <div class="hud-label">Lives</div>
+      <div class="hud-lives" id="livesDisplay">&#10084;&#65039;&#10084;&#65039;&#10084;&#65039;</div>
+    </div>
+    <div class="hud-card">
+      <div class="hud-label">Speed</div>
+      <div class="hud-value" id="speedLabel" style="font-size:0.9rem;">EASY</div>
+    </div>
+  </div>
 
   <div class="game-area">
     <div class="board" id="board"></div>
@@ -273,20 +674,147 @@
         <label>Alex Volume</label><br>
         <input type="range" id="alexVol" min="0" max="100" value="70">
       </div>
+      <div class="music-ctrl" id="musicCtrl">
+        <button class="music-toggle" id="musicToggle" title="Toggle music">&#9834;</button>
+        <label>Music</label>
+        <input type="range" id="musicVol" min="0" max="100" value="50">
+      </div>
     </div>
   </div>
 
   <button class="btn" id="startBtn">Start Game</button>
+
   <div class="game-over" id="gameOver">
     <h2>GAME OVER</h2>
     <p class="final">Final Score: <span id="finalScore">0</span></p>
-    <p class="final">Headshots: <span id="finalHead">0</span> | Body: <span id="finalBody">0</span> | Groin: <span id="finalGroin">0</span></p>
-    <p class="final">Best Combo: <span id="finalCombo">0</span>x | Round: <span id="finalRound">0</span></p>
-    <p id="verdict" style="color:#aaa; margin-top:5px;"></p>
+    <p class="final">Headshots: <span id="finalHead">0</span> &nbsp;|&nbsp; Body: <span id="finalBody">0</span> &nbsp;|&nbsp; Groin: <span id="finalGroin">0</span></p>
+    <p class="final">Best Combo: <span id="finalCombo">0</span>x &nbsp;|&nbsp; Round: <span id="finalRound">0</span></p>
+    <p id="verdict"></p>
     <button class="btn" id="restartBtn">Play Again</button>
   </div>
 
+  <div class="footer">Whack-a-Epstein &bull; He didn't whack himself</div>
+</div>
+
 <script>
+// ================================================================
+//  BACKGROUND MUSIC (EFN.mp3)
+// ================================================================
+let bgMusic = null;
+let musicEnabled = false;
+
+function initMusic() {
+  bgMusic = new Audio('EFN.mp3');
+  bgMusic.loop = true;
+  bgMusic.volume = 0.5;
+  musicEnabled = true;
+  document.getElementById('musicCtrl').classList.add('active');
+}
+
+document.getElementById('introMusicYes').addEventListener('click', () => {
+  initMusic();
+  dismissIntro();
+  // Try playing immediately - will start once game starts or on interaction
+  bgMusic.play().catch(() => {});
+});
+
+document.getElementById('introMusicNo').addEventListener('click', () => {
+  dismissIntro();
+});
+
+function dismissIntro() {
+  document.getElementById('introOverlay').classList.add('hidden');
+}
+
+// Music volume slider
+document.getElementById('musicVol').addEventListener('input', (e) => {
+  if (bgMusic) bgMusic.volume = e.target.value / 100;
+});
+
+// Music toggle button
+document.getElementById('musicToggle').addEventListener('click', () => {
+  if (!bgMusic) return;
+  if (bgMusic.paused) {
+    bgMusic.play().catch(() => {});
+    document.getElementById('musicToggle').textContent = '\u266A';
+    document.getElementById('musicToggle').style.color = '';
+  } else {
+    bgMusic.pause();
+    document.getElementById('musicToggle').textContent = '\u2716';
+    document.getElementById('musicToggle').style.color = '#ff4444';
+  }
+});
+
+// ================================================================
+//  ANIMATED BACKGROUND
+// ================================================================
+(function() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const COUNT = 50;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: 1 + Math.random() * 2,
+      a: 0.1 + Math.random() * 0.2,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 150) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(233, 69, 96, ${0.06 * (1 - dist / 150)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw particles
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(233, 69, 96, ${p.a})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ================================================================
+//  GAME CONSTANTS
+// ================================================================
 const HOLES = 9;
 const MAX_LIVES = 3;
 
@@ -302,7 +830,7 @@ const IMAGES = [
   'https://d3i6fh83elv35t.cloudfront.net/static/2025/12/billclinton3-1024x793.jpg'
 ];
 
-// ---- Alex Jones Voice Clips (from myinstants.com) ----
+// ---- Alex Jones Voice Clips ----
 const MI = 'https://www.myinstants.com/media/sounds/';
 const ALEX_CLIPS = {
   hit: [
@@ -328,7 +856,6 @@ const ALEX_CLIPS = {
   ],
 };
 
-// Alex Jones text quotes (shown alongside voice)
 const ALEX_QUOTES = {
   head: [
     "RIGHT IN THE GLOBALIST HEAD!",
@@ -364,7 +891,9 @@ const ALEX_QUOTES = {
   end: ["THE FIGHT CONTINUES TOMORROW, PATRIOT."],
 };
 
-// ---- Audio ----
+// ================================================================
+//  AUDIO ENGINE
+// ================================================================
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let currentAlexAudio = null;
 
@@ -453,7 +982,9 @@ function playMissSound() {
   o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.4);
 }
 
-// ---- Game State ----
+// ================================================================
+//  GAME STATE
+// ================================================================
 let score = 0;
 let combo = 0;
 let bestCombo = 0;
@@ -498,32 +1029,37 @@ const impactSVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
 // Preload images
 IMAGES.forEach(src => { const img = new Image(); img.src = src; });
 
-// ---- Speed calculation ----
+// ================================================================
+//  SPEED
+// ================================================================
 function getShowTime() {
-  // Starts at 2500ms, decreases with each whack
   return Math.max(400, 2500 - totalWhacks * 40);
 }
 function getSpawnDelay() {
   return Math.max(100, 500 - totalWhacks * 10);
 }
 function getSpeedTier() {
-  if (totalWhacks < 8) return 'EASY';
+  if (totalWhacks < 8)  return 'EASY';
   if (totalWhacks < 18) return 'MEDIUM';
   if (totalWhacks < 30) return 'FAST';
   if (totalWhacks < 45) return 'INSANE';
   return 'IMPOSSIBLE';
 }
 
-// ---- Lives display ----
+// ================================================================
+//  LIVES
+// ================================================================
 function updateLives() {
   let html = '';
   for (let i = 0; i < MAX_LIVES; i++) {
-    html += i < lives ? '❤️' : '<span class="lost">🖤</span>';
+    html += i < lives ? '\u2764\uFE0F' : '<span class="lost">\uD83D\uDDA4</span>';
   }
   livesDisplay.innerHTML = html;
 }
 
-// ---- Alex Jones Hype ----
+// ================================================================
+//  ALEX JONES HYPE
+// ================================================================
 function alexSay(textCategory, audioCategory) {
   const quotes = ALEX_QUOTES[textCategory];
   alexQuote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
@@ -534,7 +1070,9 @@ function alexSay(textCategory, audioCategory) {
   if (audioCategory) playAlexClip(audioCategory);
 }
 
-// ---- Blood Effects ----
+// ================================================================
+//  BLOOD EFFECTS
+// ================================================================
 function spawnBlood(hole, x, y, intensity) {
   const count = intensity === 'groin' ? 22 : intensity === 'head' ? 16 : 10;
   for (let i = 0; i < count; i++) {
@@ -568,7 +1106,9 @@ function spawnBlood(hole, x, y, intensity) {
   setTimeout(() => splat.remove(), 500);
 }
 
-// ---- Build Board ----
+// ================================================================
+//  BUILD BOARD
+// ================================================================
 for (let i = 0; i < HOLES; i++) {
   const hole = document.createElement('div');
   hole.classList.add('hole');
@@ -602,13 +1142,13 @@ function getHitZone(e, moleEl) {
 }
 
 function getMultiplier(zone) {
-  if (zone === 'head') return 2;
+  if (zone === 'head')  return 2;
   if (zone === 'groin') return 5;
   return 1;
 }
 
 function getZoneLabel(zone, pts) {
-  if (zone === 'head') return `HEADSHOT! +${pts}`;
+  if (zone === 'head')  return `HEADSHOT! +${pts}`;
   if (zone === 'groin') return `GROIN SHOT! +${pts}`;
   return `+${pts}`;
 }
@@ -646,7 +1186,7 @@ function showMole() {
   round++;
 
   const showTime = getShowTime();
-  speedLabel.textContent = 'SPEED: ' + getSpeedTier();
+  speedLabel.textContent = getSpeedTier();
 
   moleTimeout = setTimeout(() => {
     if (mole.dataset.hit === 'false' && mole.classList.contains('up')) {
@@ -693,7 +1233,6 @@ function whack(idx, e) {
   spawnBlood(holes[idx], cx, cy, zone);
   playWhack(zone);
 
-  // Screen shake on big hits
   if (zone === 'groin' || zone === 'head') {
     document.body.classList.remove('screen-shake');
     void document.body.offsetWidth;
@@ -718,7 +1257,6 @@ function whack(idx, e) {
   else bodyshots++;
   scoreEl.textContent = score;
 
-  // Alex Jones reacts - voice + text
   if (combo >= 4) {
     alexSay('combo', 'combo');
   } else if (zone === 'groin' || zone === 'head') {
@@ -727,7 +1265,6 @@ function whack(idx, e) {
     alexSay('body', 'hit');
   }
 
-  // Score popup
   const pop = document.createElement('div');
   pop.classList.add('score-pop', zone);
   pop.textContent = getZoneLabel(zone, pts);
@@ -743,13 +1280,18 @@ function startGame() {
   scoreEl.textContent = 0;
   comboEl.textContent = 0;
   updateLives();
-  speedLabel.textContent = 'SPEED: EASY';
+  speedLabel.textContent = 'EASY';
   gameOver.style.display = 'none';
   startBtn.style.display = 'none';
   running = true;
 
   if (audioCtx.state === 'suspended') audioCtx.resume();
   alexSay('start', 'start');
+
+  // Start/resume music if enabled
+  if (bgMusic && musicEnabled) {
+    bgMusic.play().catch(() => {});
+  }
 
   setTimeout(showMole, 1000);
 }
